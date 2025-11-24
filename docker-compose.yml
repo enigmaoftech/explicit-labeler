@@ -2,14 +2,8 @@ version: '3.8'
 
 services:
   explicit-labeler:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.cron
-      args:
-        - PUID=${PUID:-1000}
-        - PGID=${PGID:-1000}
+    image: ghcr.io/enigmaoftech/explicit-labeler:latest
     container_name: explicit-labeler
-    image: explicit-labeler:latest
     restart: unless-stopped
     environment:
       - TZ=${TZ}
@@ -33,3 +27,16 @@ services:
       - ./logs:/app/logs
     # Cron runs automatically on schedule (default: daily at 2 AM)
     # Configure schedule via CRON_SCHEDULE environment variable in .env
+
+
+# Use this for manual build
+#services:
+#  explicit-labeler:
+#    build:
+#      context: .
+#      dockerfile: docker/Dockerfile.cron
+#      args:
+#        - PUID=${PUID:-1000}
+#        - PGID=${PGID:-1000}
+#    image: explicit-labeler:latest
+#    container_name: explicit-labeler
