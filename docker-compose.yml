@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  explicit-labeler:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.cron
+      args:
+        - PUID=${PUID:-1000}
+        - PGID=${PGID:-1000}
+    container_name: explicit-labeler
+    image: explicit-labeler:latest
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - RUN_AT_START=${RUN_AT_START}      
+      - CRON_SCHEDULE=${CRON_SCHEDULE}
+      - DELAY_AFTER_ALBUM=${DELAY_AFTER_ALBUM}
+      - DELAY_AFTER_TRACK=${DELAY_AFTER_TRACK}
+      - DELAY_AFTER_ARTIST=${DELAY_AFTER_ARTIST}
+      - DELAY_AFTER_API_CALL=${DELAY_AFTER_API_CALL}
+      - PLEX_BASEURL=${PLEX_BASEURL}
+      - PLEX_TOKEN=${PLEX_TOKEN}
+      - PLEX_LIBRARY=${PLEX_LIBRARY}
+      - DATA_DIR=/app/data
+      - LOG_FILE=/app/logs/cron.log      
+    volumes:
+      # Persist progress and processed albums cache
+      - ./data:/app/data
+      # Logs directory
+      - ./logs:/app/logs
+    # Cron runs automatically on schedule (default: daily at 2 AM)
+    # Configure schedule via CRON_SCHEDULE environment variable in .env

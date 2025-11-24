@@ -1,0 +1,28 @@
+# Environment files
+.env
+
+# Progress and cache files
+.progress.json
+.processed_albums.json
+
+# Data directory
+data/
+
+# Logs
+logs/
+*.log
+cron.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# macOS
+.DS_Store
+

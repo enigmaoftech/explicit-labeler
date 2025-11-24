@@ -1,0 +1,26 @@
+# Cron configuration for Explicit Music Labeler
+# Currently supports Plex only (Emby, Jellyfin, Navidrome planned)
+# Edit this file to customize the schedule
+#
+# Format: minute hour day month weekday command
+#
+# Examples:
+# Run daily at 2 AM: 0 2 * * *
+# Run every 6 hours: 0 */6 * * *
+# Run every Monday at 3 AM: 0 3 * * 1
+# Run twice daily (2 AM and 2 PM): 0 2,14 * * *
+
+# Default: Run daily at 2 AM
+# This processes only new albums (skips already processed ones)
+# Note: Jobs run as appuser (UID/GID from .env)
+0 2 * * * /app/cron-wrapper.sh >> /var/log/cron.log 2>&1
+
+# Uncomment to run more frequently (every 6 hours):
+# 0 */6 * * * /app/cron-wrapper.sh >> /var/log/cron.log 2>&1
+
+# Uncomment to process all libraries:
+# 0 2 * * * /app/cron-wrapper.sh --all-libraries >> /var/log/cron.log 2>&1
+
+# Uncomment to force reprocess everything (use with caution):
+# 0 2 * * 0 /app/cron-wrapper.sh --force >> /var/log/cron.log 2>&1
+
