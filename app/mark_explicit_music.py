@@ -39,6 +39,12 @@ from pathlib import Path
 from urllib.parse import urljoin
 from plexapi.server import PlexServer
 
+# Ensure unbuffered output for real-time logging in Docker
+# This is handled by the -u flag when calling python, but we can also set it here
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(line_buffering=True)
+    sys.stderr.reconfigure(line_buffering=True)
+
 EXPLICIT_LABEL = "Explicit"
 
 # Throttling defaults (seconds)
@@ -442,7 +448,12 @@ def main():
             print(f"No artists matched '{args.artist}' in library '{library_name}'.")
             continue
 
+        total_artists = len(artists)
+        artist_count = 0
+        print(f"\nFound {total_artists} artist(s) to process\n")
+
         for artist in artists:
+            artist_count += 1
             artist_key = f"{artist.title}|||{artist.ratingKey}"
             
             # Resume logic: skip until we find the resume point
@@ -461,18 +472,23 @@ def main():
                 skip_until_artist = None
                 skip_until_album = None
             
-            print(f"\nArtist: {artist.title}")
+            print(f"\n[{artist_count}/{total_artists}] Artist: {artist.title}", flush=True)
             try:
                 albums = artist.albums()
             except Exception as e:
-                print(f"  - Skipping artist (albums error): {e}")
+                print(f"  - Skipping artist (albums error): {e}", flush=True)
                 continue
+            
+            album_count = len(albums)
+            print(f"  Found {album_count} album(s)", flush=True)
             
             # Sleep after successfully getting albums (outside try block to avoid masking sleep errors)
             if args.delay_artist > 0:
                 time.sleep(args.delay_artist)
 
+            album_num = 0
             for album in albums:
+                album_num += 1
                 album_key = get_album_key(library_name, artist.title, album.title or "", str(album.ratingKey))
                 
                 # Resume logic: skip until we find the resume album
@@ -480,10 +496,10 @@ def main():
                     if not skip_until_album == album_key:
                         continue
                     else:
-                        print(f"  Album: {album.title} (resuming from here)")
+                        print(f"  [{album_num}/{album_count}] Album: {album.title} (resuming from here)")
                         skip_until_album = None  # Clear resume flag after finding it
                 else:
-                    print(f"  Album: {album.title}")
+                    print(f"  [{album_num}/{album_count}] Album: {album.title}", flush=True)
                 
                 # Skip if already processed (unless force)
                 if album_key in processed_albums and not args.force:
@@ -492,6 +508,8 @@ def main():
                 
                 try:
                     tracks = album.tracks()
+                    track_count = len(tracks)
+                    print(f"    Processing {track_count} track(s)...", flush=True)
                     time.sleep(args.delay_api)
                 except Exception as e:
                     print(f"    - Skipping album (tracks error): {e}")
@@ -520,10 +538,16 @@ def main():
                         remove_label_if_present(album, EXPLICIT_LABEL, args.dry_run, delay=args.delay_api)
 
                     # Tracks: decide explicit from FILENAME ONLY
+                    tracks_processed = 0
                     for track in tracks:
                         total_tracks_checked += 1
+                        tracks_processed += 1
                         is_explicit = track_filename_is_explicit(track, verbose=args.verbose)
                         time.sleep(args.delay_api)
+                        
+                        # Progress update every 10 tracks or on last track
+                        if tracks_processed % 10 == 0 or tracks_processed == track_count:
+                            print(f"    Progress: {tracks_processed}/{track_count} tracks processed...", flush=True)
 
                         if is_explicit:
                             desired = apply_front(track.title or "")
@@ -555,6 +579,7 @@ def main():
                     # Save progress after each album
                     save_progress(library_name, artist_key, album_key, [])
                     
+                    print(f"    ✓ Completed album: {album.title} ({tracks_processed} tracks)", flush=True)
                     time.sleep(args.delay_album)
                     
                 except Exception as e:
@@ -567,14 +592,16 @@ def main():
     # Clear progress on successful completion
     if not args.dry_run:
         clear_progress()
-        print("\n✓ Progress cleared (run completed successfully)")
+        print("\n✓ Progress cleared (run completed successfully)", flush=True)
     
-    print("\nSummary:")
-    print(f"  Tracks checked:  {total_tracks_checked}")
-    print(f"  Titles updated:  {total_titles_updated}")
-    print(f"  Albums updated:  {total_albums_updated}")
+    print("\n" + "="*60, flush=True)
+    print("Summary:", flush=True)
+    print(f"  Tracks checked:  {total_tracks_checked}", flush=True)
+    print(f"  Titles updated:  {total_titles_updated}", flush=True)
+    print(f"  Albums updated:  {total_albums_updated}", flush=True)
     if args.dry_run:
-        print("  (Dry run only; no changes were saved.)")
+        print("  (Dry run only; no changes were saved.)", flush=True)
+    print("="*60, flush=True)
 
 if __name__ == "__main__":
     main()

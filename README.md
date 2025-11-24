@@ -35,6 +35,13 @@ docker-compose up -d
 # 3. View logs
 docker-compose logs -f
 
+# Or view log file directly
+tail -f logs/explicit-labeler.log
+
+# Logs are automatically rotated before each run
+# Default: keeps 7 runs of history (configurable via LOG_RETENTION_RUNS)
+# Rotated logs: explicit-labeler-1.log, explicit-labeler-2.log, etc.
+
 # Optional: Test configuration first
 # docker-compose exec explicit-music-labeler python3 mark_explicit_music.py --dry-run
 ```
@@ -77,3 +84,20 @@ nano .env
 # Restart container to apply changes
 docker-compose restart
 ```
+
+## Log Retention
+
+By default, the application keeps 7 runs of rotated logs. Logs are rotated before each script execution. You can customize this by setting the `LOG_RETENTION_RUNS` environment variable in your `.env` file:
+
+```bash
+# Keep 14 runs of log history
+LOG_RETENTION_RUNS=14
+
+# Keep 30 runs of log history
+LOG_RETENTION_RUNS=30
+
+# Keep only 3 runs (minimum: 1)
+LOG_RETENTION_RUNS=3
+```
+
+**Note**: The value must be a positive integer (1 or greater). If an invalid value is provided, the default of 7 runs will be used. Each time the script runs, the current log is rotated and older logs are shifted (1 becomes 2, 2 becomes 3, etc.), with the oldest being deleted.

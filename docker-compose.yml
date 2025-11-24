@@ -19,7 +19,8 @@ services:
       - PLEX_TOKEN=${PLEX_TOKEN}
       - PLEX_LIBRARY=${PLEX_LIBRARY}
       - DATA_DIR=/app/data
-      - LOG_FILE=/app/logs/cron.log      
+      - LOG_FILE=${LOG_FILE}
+      - LOG_RETENTION_RUNS=${LOG_RETENTION_RUNS}      
     volumes:
       # Persist progress and processed albums cache
       - ./data:/app/data

@@ -5,9 +5,11 @@ ARG PUID=1000
 ARG PGID=1000
 
 # Install cron and sudo
+# Note: logrotate removed - log rotation now happens per-run in cron-wrapper.sh
 RUN apt-get update && apt-get install -y --no-install-recommends \
     cron \
     sudo \
+    gzip \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -21,6 +23,7 @@ COPY app/mark_explicit_music.py .
 COPY app/cron-wrapper.sh /app/cron-wrapper.sh
 COPY app/crontab /app/crontab
 COPY docker/entrypoint.sh /app/entrypoint.sh
+# Note: logrotate.conf is now generated dynamically in entrypoint.sh
 
 # Create group and user with specified UID/GID
 RUN groupadd -g ${PGID} appuser || true && \
@@ -42,9 +45,9 @@ ENV PGID=${PGID}
 RUN chmod +x mark_explicit_music.py cron-wrapper.sh entrypoint.sh
 
 # Create log file with proper permissions
-RUN touch /var/log/cron.log && \
-    chown ${PUID}:${PGID} /var/log/cron.log && \
-    chmod 666 /var/log/cron.log
+RUN touch /app/logs/explicit-labeler.log && \
+    chown ${PUID}:${PGID} /app/logs/explicit-labeler.log && \
+    chmod 666 /app/logs/explicit-labeler.log
 
 # Install crontab will be done at runtime by entrypoint
 # Keep as root for cron daemon (cron must run as root)

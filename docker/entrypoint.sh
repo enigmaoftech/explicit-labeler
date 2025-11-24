@@ -27,9 +27,9 @@ chown -R ${PUID}:${PGID} /app 2>/dev/null || true
 # Fix ownership of data and logs directories
 chown -R ${PUID}:${PGID} /app/data /app/logs 2>/dev/null || true
 
-# Fix ownership of cron log
-chown ${PUID}:${PGID} /var/log/cron.log 2>/dev/null || true
-chmod 666 /var/log/cron.log 2>/dev/null || true
+# Fix ownership of log file
+chown ${PUID}:${PGID} /app/logs/explicit-labeler.log 2>/dev/null || true
+chmod 666 /app/logs/explicit-labeler.log 2>/dev/null || true
 
 # Create a script that exports environment variables for cron jobs
 # Cron doesn't inherit environment variables, so we need to explicitly set them
@@ -38,7 +38,7 @@ PLEX_BASEURL_ENV="${PLEX_BASEURL}"
 PLEX_TOKEN_ENV="${PLEX_TOKEN}"
 PLEX_LIBRARY_ENV="${PLEX_LIBRARY:-Music}"
 DATA_DIR_ENV="${DATA_DIR:-/app/data}"
-LOG_FILE_ENV="${LOG_FILE:-/app/logs/cron.log}"
+LOG_FILE_ENV="${LOG_FILE:-/app/logs/explicit-labeler.log}"
 TZ_ENV="${TZ:-UTC}"
 PUID_ENV="${PUID:-1000}"
 PGID_ENV="${PGID:-1000}"
@@ -71,6 +71,7 @@ export DELAY_AFTER_ALBUM="${DELAY_ALBUM_ENV}"
 export DELAY_AFTER_TRACK="${DELAY_TRACK_ENV}"
 export DELAY_AFTER_ARTIST="${DELAY_ARTIST_ENV}"
 export DELAY_AFTER_API_CALL="${DELAY_API_ENV}"
+export LOG_RETENTION_RUNS="${LOG_RETENTION_RUNS:-7}"
 exec /app/cron-wrapper.sh "\$@"
 CRONENVEOF
 chmod +x /app/cron-env-wrapper.sh
@@ -86,7 +87,7 @@ PLEX_BASEURL_CRON="${PLEX_BASEURL}"
 PLEX_TOKEN_CRON="${PLEX_TOKEN}"
 PLEX_LIBRARY_CRON="${PLEX_LIBRARY:-Music}"
 DATA_DIR_CRON="${DATA_DIR:-/app/data}"
-LOG_FILE_CRON="${LOG_FILE:-/app/logs/cron.log}"
+LOG_FILE_CRON="${LOG_FILE:-/app/logs/explicit-labeler.log}"
 TZ_CRON="${TZ:-UTC}"
 PUID_CRON="${PUID:-1000}"
 PGID_CRON="${PGID:-1000}"
@@ -120,10 +121,12 @@ DELAY_AFTER_ALBUM=${DELAY_ALBUM_CRON}
 DELAY_AFTER_TRACK=${DELAY_TRACK_CRON}
 DELAY_AFTER_ARTIST=${DELAY_ARTIST_CRON}
 DELAY_AFTER_API_CALL=${DELAY_API_CRON}
+LOG_RETENTION_RUNS=${LOG_RETENTION_RUNS:-7}
 
 # Cron schedule (from CRON_SCHEDULE env var, default: 0 2 * * *)
 # Format: minute hour day month weekday command
-${CRON_SCHEDULE} /app/cron-env-wrapper.sh >> /var/log/cron.log 2>&1
+# Note: Log rotation happens in cron-wrapper.sh before each run
+${CRON_SCHEDULE} /app/cron-env-wrapper.sh >> /app/logs/explicit-labeler.log 2>&1
 CRONTABEOF
 
 # Install crontab for appuser
@@ -156,7 +159,8 @@ if [ "$RUN_AT_START" = "true" ] || [ "$RUN_AT_START" = "1" ]; then
     # Python script will read from environment variables
     if [ -n "$PLEX_BASEURL_VAL" ] && [ -n "$PLEX_TOKEN_VAL" ]; then
         echo "Starting initial scan..." >&2
-        python3 mark_explicit_music.py 2>&1 | tee -a /app/logs/cron.log || true
+        # Use unbuffered Python output and tee to both stdout and log file
+        python3 -u mark_explicit_music.py 2>&1 | tee -a /app/logs/explicit-labeler.log || true
     else
         echo "Warning: PLEX_BASEURL or PLEX_TOKEN not available, skipping initial run" >&2
         echo "  PLEX_BASEURL: ${PLEX_BASEURL_VAL:0:50}..." >&2
@@ -167,6 +171,9 @@ if [ "$RUN_AT_START" = "true" ] || [ "$RUN_AT_START" = "1" ]; then
     echo "Initial run complete. Cron will continue on schedule."
     echo ""
 fi
+
+# Log rotation is now handled per-run in cron-wrapper.sh
+# No need for logrotate cron job - logs rotate before each script execution
 
 # Start cron as root (cron daemon needs to run as root)
 # Cron jobs will execute as appuser (specified in crontab)

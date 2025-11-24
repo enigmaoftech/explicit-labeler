@@ -42,7 +42,7 @@ docker-compose up -d
 ```bash
 docker-compose logs -f
 # Or
-tail -f logs/cron.log
+tail -f logs/explicit-labeler.log
 ```
 
 4. Customize schedule (optional):
@@ -170,6 +170,32 @@ DELAY_AFTER_API_CALL=0.2
 **Note**: If you set a negative value, it will be rejected and the default will be used. If you don't set these variables at all, defaults will be used automatically.
 
 You can also adjust these with `--delay-*` command-line flags if needed.
+
+## Log Retention
+
+By default, the application keeps 7 runs of rotated logs. Logs are rotated **before each script execution** (not on a daily schedule). You can customize this by setting the `LOG_RETENTION_RUNS` environment variable in your `.env` file:
+
+```bash
+# Keep 14 runs of log history
+LOG_RETENTION_RUNS=14
+
+# Keep 30 runs of log history
+LOG_RETENTION_RUNS=30
+
+# Keep only 3 runs (minimum: 1)
+LOG_RETENTION_RUNS=3
+```
+
+**Note**: The value must be a positive integer (1 or greater). If an invalid value is provided, the default of 7 runs will be used.
+
+**How it works**: Each time the script runs, the current log file is rotated:
+- `explicit-labeler.log` - Current active log (new run starts here)
+- `explicit-labeler-1.log.gz` - Previous run (compressed)
+- `explicit-labeler-2.log.gz` - 2 runs ago (compressed)
+- `explicit-labeler-3.log.gz` - 3 runs ago (compressed)
+- ... and so on up to the retention limit
+
+The oldest log is automatically deleted when the retention limit is reached.
 
 ## Scheduling
 
