@@ -1,13 +1,8 @@
 name: Docker Build and Test
 
 on:
-  push:
-    branches: [ main, master ]
-    tags:
-      - 'v*'          # e.g. v1.0.0
-  pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:
+  release:
+    types: [published]   # runs when you click “Publish release”
 
 permissions:
   contents: read
