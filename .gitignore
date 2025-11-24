@@ -1,5 +1,7 @@
 # Environment files
 .env
+# Keep .env.example for users to copy
+!.env.example
 
 # Progress and cache files
 .progress.json

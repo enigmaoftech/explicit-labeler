@@ -323,10 +323,24 @@ def main():
     ap.add_argument("--resume", action="store_true", help="Resume from last position (default: True)")
     ap.add_argument("--no-resume", dest="resume", action="store_false", help="Don't resume, start from beginning")
     # Read throttling from environment variables if available, otherwise use defaults
-    delay_album_default = float(os.getenv("DELAY_AFTER_ALBUM", DEFAULT_DELAY_AFTER_ALBUM))
-    delay_track_default = float(os.getenv("DELAY_AFTER_TRACK", DEFAULT_DELAY_AFTER_TRACK))
-    delay_artist_default = float(os.getenv("DELAY_AFTER_ARTIST", DEFAULT_DELAY_AFTER_ARTIST))
-    delay_api_default = float(os.getenv("DELAY_AFTER_API_CALL", DEFAULT_DELAY_AFTER_API_CALL))
+    # Validate that values are positive numbers, use defaults if invalid or negative
+    def safe_float_env(env_var, default):
+        try:
+            val = os.getenv(env_var)
+            if val is None or val.strip() == "":
+                return default
+            fval = float(val)
+            # Reject negative numbers - use default instead
+            if fval < 0:
+                return default
+            return fval
+        except (ValueError, TypeError):
+            return default
+    
+    delay_album_default = safe_float_env("DELAY_AFTER_ALBUM", DEFAULT_DELAY_AFTER_ALBUM)
+    delay_track_default = safe_float_env("DELAY_AFTER_TRACK", DEFAULT_DELAY_AFTER_TRACK)
+    delay_artist_default = safe_float_env("DELAY_AFTER_ARTIST", DEFAULT_DELAY_AFTER_ARTIST)
+    delay_api_default = safe_float_env("DELAY_AFTER_API_CALL", DEFAULT_DELAY_AFTER_API_CALL)
     
     ap.add_argument("--delay-album", type=float, default=delay_album_default, help=f"Delay after processing album (default: {delay_album_default}s, env: DELAY_AFTER_ALBUM)")
     ap.add_argument("--delay-track", type=float, default=delay_track_default, help=f"Delay after processing track (default: {delay_track_default}s, env: DELAY_AFTER_TRACK)")
@@ -450,10 +464,13 @@ def main():
         print(f"\nArtist: {artist.title}")
         try:
             albums = artist.albums()
-            time.sleep(args.delay_artist)
         except Exception as e:
             print(f"  - Skipping artist (albums error): {e}")
             continue
+        
+        # Sleep after successfully getting albums (outside try block to avoid masking sleep errors)
+        if args.delay_artist > 0:
+            time.sleep(args.delay_artist)
 
         for album in albums:
             album_key = get_album_key(library_name, artist.title, album.title or "", str(album.ratingKey))

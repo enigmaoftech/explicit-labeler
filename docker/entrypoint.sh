@@ -42,10 +42,17 @@ LOG_FILE_ENV="${LOG_FILE:-/app/logs/cron.log}"
 TZ_ENV="${TZ:-UTC}"
 PUID_ENV="${PUID:-1000}"
 PGID_ENV="${PGID:-1000}"
+# Validate delay values - ensure they're positive numbers, use defaults if empty/invalid
 DELAY_ALBUM_ENV="${DELAY_AFTER_ALBUM:-0.5}"
 DELAY_TRACK_ENV="${DELAY_AFTER_TRACK:-0.2}"
 DELAY_ARTIST_ENV="${DELAY_AFTER_ARTIST:-1.0}"
 DELAY_API_ENV="${DELAY_AFTER_API_CALL:-0.1}"
+
+# Ensure values are valid (non-empty)
+[ -z "$DELAY_ALBUM_ENV" ] && DELAY_ALBUM_ENV="0.5"
+[ -z "$DELAY_TRACK_ENV" ] && DELAY_TRACK_ENV="0.2"
+[ -z "$DELAY_ARTIST_ENV" ] && DELAY_ARTIST_ENV="1.0"
+[ -z "$DELAY_API_ENV" ] && DELAY_API_ENV="0.1"
 
 # Create wrapper script with actual values
 cat > /app/cron-env-wrapper.sh << CRONENVEOF
@@ -83,10 +90,17 @@ LOG_FILE_CRON="${LOG_FILE:-/app/logs/cron.log}"
 TZ_CRON="${TZ:-UTC}"
 PUID_CRON="${PUID:-1000}"
 PGID_CRON="${PGID:-1000}"
+# Validate delay values - ensure they're positive numbers, use defaults if empty/invalid
 DELAY_ALBUM_CRON="${DELAY_AFTER_ALBUM:-0.5}"
 DELAY_TRACK_CRON="${DELAY_AFTER_TRACK:-0.2}"
 DELAY_ARTIST_CRON="${DELAY_AFTER_ARTIST:-1.0}"
 DELAY_API_CRON="${DELAY_AFTER_API_CALL:-0.1}"
+
+# Ensure values are valid (non-empty and numeric)
+[ -z "$DELAY_ALBUM_CRON" ] && DELAY_ALBUM_CRON="0.5"
+[ -z "$DELAY_TRACK_CRON" ] && DELAY_TRACK_CRON="0.2"
+[ -z "$DELAY_ARTIST_CRON" ] && DELAY_ARTIST_CRON="1.0"
+[ -z "$DELAY_API_CRON" ] && DELAY_API_CRON="0.1"
 
 # Create a crontab file with environment variables
 cat > /tmp/crontab-install << CRONTABEOF

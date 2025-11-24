@@ -150,6 +150,8 @@ This is useful if you only want the script to run on the cron schedule and not i
 
 Throttling delays can be configured via environment variables in your `.env` file to prevent overwhelming your Plex server:
 
+**Important**: All delay values must be **positive numbers (0 or greater)**. Negative numbers are not allowed and will be rejected, causing the default value to be used instead.
+
 Default delays:
 - After album: 0.5s (`DELAY_AFTER_ALBUM`)
 - After track: 0.2s (`DELAY_AFTER_TRACK`)
@@ -158,11 +160,14 @@ Default delays:
 
 To customize, add to your `.env` file:
 ```bash
+# All values must be positive (0 or greater)
 DELAY_AFTER_ALBUM=1.0      # Increase delay if Plex is slow
 DELAY_AFTER_TRACK=0.5
 DELAY_AFTER_ARTIST=2.0
 DELAY_AFTER_API_CALL=0.2
 ```
+
+**Note**: If you set a negative value, it will be rejected and the default will be used. If you don't set these variables at all, defaults will be used automatically.
 
 You can also adjust these with `--delay-*` command-line flags if needed.
 
