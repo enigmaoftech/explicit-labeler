@@ -460,109 +460,109 @@ def main():
                 # Different library, clear resume flags
                 skip_until_artist = None
                 skip_until_album = None
-        
-        print(f"\nArtist: {artist.title}")
-        try:
-            albums = artist.albums()
-        except Exception as e:
-            print(f"  - Skipping artist (albums error): {e}")
-            continue
-        
-        # Sleep after successfully getting albums (outside try block to avoid masking sleep errors)
-        if args.delay_artist > 0:
-            time.sleep(args.delay_artist)
-
-        for album in albums:
-            album_key = get_album_key(library_name, artist.title, album.title or "", str(album.ratingKey))
             
-            # Resume logic: skip until we find the resume album
-            if skip_until_album and found_resume_point and library_name == skip_until_library:
-                if not skip_until_album == album_key:
-                    continue
-                else:
-                    print(f"  Album: {album.title} (resuming from here)")
-                    skip_until_album = None  # Clear resume flag after finding it
-            else:
-                print(f"  Album: {album.title}")
-            
-            # Skip if already processed (unless force)
-            if album_key in processed_albums and not args.force:
-                print(f"    - Skipping (already processed)")
-                continue
-            
+            print(f"\nArtist: {artist.title}")
             try:
-                tracks = album.tracks()
-                time.sleep(args.delay_api)
+                albums = artist.albums()
             except Exception as e:
-                print(f"    - Skipping album (tracks error): {e}")
+                print(f"  - Skipping artist (albums error): {e}")
                 continue
+            
+            # Sleep after successfully getting albums (outside try block to avoid masking sleep errors)
+            if args.delay_artist > 0:
+                time.sleep(args.delay_artist)
 
-            try:
-                # Decide album explicit from ALBUM FOLDER (use first track as sample for folder)
-                sample_track = tracks[0] if tracks else None
-                album_is_explicit = album_folder_is_explicit(album, sample_track=sample_track, verbose=args.verbose)
-                time.sleep(args.delay_api)
+            for album in albums:
+                album_key = get_album_key(library_name, artist.title, album.title or "", str(album.ratingKey))
+                
+                # Resume logic: skip until we find the resume album
+                if skip_until_album and found_resume_point and library_name == skip_until_library:
+                    if not skip_until_album == album_key:
+                        continue
+                    else:
+                        print(f"  Album: {album.title} (resuming from here)")
+                        skip_until_album = None  # Clear resume flag after finding it
+                else:
+                    print(f"  Album: {album.title}")
+                
+                # Skip if already processed (unless force)
+                if album_key in processed_albums and not args.force:
+                    print(f"    - Skipping (already processed)")
+                    continue
+                
+                try:
+                    tracks = album.tracks()
+                    time.sleep(args.delay_api)
+                except Exception as e:
+                    print(f"    - Skipping album (tracks error): {e}")
+                    continue
 
-                # Apply album title
-                desired_album_title = apply_front(album.title or "") if album_is_explicit else strip_e(album.title or "")
-                if desired_album_title != (album.title or ""):
-                    total_albums_updated += 1
-                    action = "mark" if album_is_explicit else "unmark"
-                    print(f"    * Album title {action}: {album.title}")
-                    edit_title_unlock_set_lock(album, desired_album_title, args.dry_run, prefix="    ",
-                                               session=session, baseurl=args.baseurl, token=args.token,
-                                               delay=args.delay_api)
-
-                # Album label
-                if album_is_explicit:
-                    add_label_if_missing(album, EXPLICIT_LABEL, args.dry_run, delay=args.delay_api)
-                elif args.remove_labels:
-                    remove_label_if_present(album, EXPLICIT_LABEL, args.dry_run, delay=args.delay_api)
-
-                # Tracks: decide explicit from FILENAME ONLY
-                for track in tracks:
-                    total_tracks_checked += 1
-                    is_explicit = track_filename_is_explicit(track, verbose=args.verbose)
+                try:
+                    # Decide album explicit from ALBUM FOLDER (use first track as sample for folder)
+                    sample_track = tracks[0] if tracks else None
+                    album_is_explicit = album_folder_is_explicit(album, sample_track=sample_track, verbose=args.verbose)
                     time.sleep(args.delay_api)
 
-                    if is_explicit:
-                        desired = apply_front(track.title or "")
-                        if desired != (track.title or ""):
-                            total_titles_updated += 1
-                            print(f"    Track mark: {track.title}")
-                            edit_title_unlock_set_lock(track, desired, args.dry_run, prefix="    ",
-                                                       session=session, baseurl=args.baseurl, token=args.token,
-                                                       delay=args.delay_api)
-                        add_label_if_missing(track, EXPLICIT_LABEL, args.dry_run, delay=args.delay_api)
-                    else:
-                        if "[e]" in (track.title or "").lower():
-                            cleaned = strip_e(track.title or "")
-                            if cleaned != (track.title or ""):
+                    # Apply album title
+                    desired_album_title = apply_front(album.title or "") if album_is_explicit else strip_e(album.title or "")
+                    if desired_album_title != (album.title or ""):
+                        total_albums_updated += 1
+                        action = "mark" if album_is_explicit else "unmark"
+                        print(f"    * Album title {action}: {album.title}")
+                        edit_title_unlock_set_lock(album, desired_album_title, args.dry_run, prefix="    ",
+                                                   session=session, baseurl=args.baseurl, token=args.token,
+                                                   delay=args.delay_api)
+
+                    # Album label
+                    if album_is_explicit:
+                        add_label_if_missing(album, EXPLICIT_LABEL, args.dry_run, delay=args.delay_api)
+                    elif args.remove_labels:
+                        remove_label_if_present(album, EXPLICIT_LABEL, args.dry_run, delay=args.delay_api)
+
+                    # Tracks: decide explicit from FILENAME ONLY
+                    for track in tracks:
+                        total_tracks_checked += 1
+                        is_explicit = track_filename_is_explicit(track, verbose=args.verbose)
+                        time.sleep(args.delay_api)
+
+                        if is_explicit:
+                            desired = apply_front(track.title or "")
+                            if desired != (track.title or ""):
                                 total_titles_updated += 1
-                                print(f"    Track unmark: {track.title}")
-                                edit_title_unlock_set_lock(track, cleaned, args.dry_run, prefix="    ",
+                                print(f"    Track mark: {track.title}")
+                                edit_title_unlock_set_lock(track, desired, args.dry_run, prefix="    ",
                                                            session=session, baseurl=args.baseurl, token=args.token,
                                                            delay=args.delay_api)
-                        if args.remove_labels:
-                            remove_label_if_present(track, EXPLICIT_LABEL, args.dry_run, delay=args.delay_api)
+                            add_label_if_missing(track, EXPLICIT_LABEL, args.dry_run, delay=args.delay_api)
+                        else:
+                            if "[e]" in (track.title or "").lower():
+                                cleaned = strip_e(track.title or "")
+                                if cleaned != (track.title or ""):
+                                    total_titles_updated += 1
+                                    print(f"    Track unmark: {track.title}")
+                                    edit_title_unlock_set_lock(track, cleaned, args.dry_run, prefix="    ",
+                                                               session=session, baseurl=args.baseurl, token=args.token,
+                                                               delay=args.delay_api)
+                            if args.remove_labels:
+                                remove_label_if_present(track, EXPLICIT_LABEL, args.dry_run, delay=args.delay_api)
+                        
+                        time.sleep(args.delay_track)
                     
-                    time.sleep(args.delay_track)
-                
-                # Mark album as processed
-                if not args.dry_run:
-                    save_processed_album(album_key)
-                
-                # Save progress after each album
-                save_progress(library_name, artist_key, album_key, [])
-                
-                time.sleep(args.delay_album)
-                
-            except Exception as e:
-                print(f"    - ERROR processing album: {e}")
-                print(f"    - Progress saved, can resume from: Library '{library_name}' / {artist.title} / {album.title}")
-                # Save progress even on error
-                save_progress(library_name, artist_key, album_key, [])
-                continue
+                    # Mark album as processed
+                    if not args.dry_run:
+                        save_processed_album(album_key)
+                    
+                    # Save progress after each album
+                    save_progress(library_name, artist_key, album_key, [])
+                    
+                    time.sleep(args.delay_album)
+                    
+                except Exception as e:
+                    print(f"    - ERROR processing album: {e}")
+                    print(f"    - Progress saved, can resume from: Library '{library_name}' / {artist.title} / {album.title}")
+                    # Save progress even on error
+                    save_progress(library_name, artist_key, album_key, [])
+                    continue
 
     # Clear progress on successful completion
     if not args.dry_run:
