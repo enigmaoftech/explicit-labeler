@@ -1,26 +1,59 @@
 FROM python:3.11-slim
 
+# Accept UID and GID as build arguments
+ARG PUID=1000
+ARG PGID=1000
+
+# Install cron and sudo
+# Note: logrotate removed - log rotation now happens per-run in cron-wrapper.sh
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    cron \
+    sudo \
+    gzip \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Install dependencies
 COPY app/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy script
+# Copy script and cron files
 COPY app/mark_explicit_music.py .
+COPY app/cron-wrapper.sh /app/cron-wrapper.sh
+COPY app/crontab /app/crontab
+COPY docker/entrypoint.sh /app/entrypoint.sh
+# Note: logrotate.conf is now generated dynamically in entrypoint.sh
 
-# Create directory for progress files
-RUN mkdir -p /app/data
+# Create group and user with specified UID/GID
+RUN groupadd -g ${PGID} appuser || true && \
+    useradd -u ${PUID} -g ${PGID} -m -s /bin/bash appuser || true
+
+# Create directory for progress files and logs
+RUN mkdir -p /app/data /app/logs && \
+    chown -R ${PUID}:${PGID} /app
 
 # Set default environment variables (can be overridden)
 ENV PLEX_BASEURL=""
 ENV PLEX_TOKEN=""
 ENV PLEX_LIBRARY="Music"
 ENV DATA_DIR="/app/data"
+ENV PUID=${PUID}
+ENV PGID=${PGID}
 
-# Make script executable
-RUN chmod +x mark_explicit_music.py
+# Make scripts executable
+RUN chmod +x mark_explicit_music.py cron-wrapper.sh entrypoint.sh
 
-# Default command (can be overridden)
-CMD ["python3", "mark_explicit_music.py", "--help"]
+# Create log file with proper permissions
+RUN touch /app/logs/explicit-labeler.log && \
+    chown ${PUID}:${PGID} /app/logs/explicit-labeler.log && \
+    chmod 666 /app/logs/explicit-labeler.log
+
+# Install crontab will be done at runtime by entrypoint
+# Keep as root for cron daemon (cron must run as root)
+USER root
+
+# Make entrypoint executable and use it
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["cron", "-f"]
 

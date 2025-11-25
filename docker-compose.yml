@@ -35,7 +35,7 @@ services:
 #  explicit-labeler:
 #    build:
 #      context: .
-#      dockerfile: docker/Dockerfile.cron
+#      dockerfile: docker/Dockerfile
 #      args:
 #        - PUID=${PUID:-1000}
 #        - PGID=${PGID:-1000}
