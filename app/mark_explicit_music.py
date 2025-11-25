@@ -462,11 +462,13 @@ def main():
                     # Haven't reached resume artist yet, skip
                     continue
                 else:
-                    # Found resume artist
+                    # Found resume artist - clear skip flag so we continue processing remaining artists
                     if skip_until_album:
-                        print(f"\nResuming from artist: {artist.title}")
+                        print(f"\nResuming from artist: {artist.title} - will continue processing all remaining artists", flush=True)
                     else:
-                        print(f"\nResuming from artist: {artist.title} (new album)")
+                        print(f"\nResuming from artist: {artist.title} (new album) - will continue processing all remaining artists", flush=True)
+                    skip_until_artist = None  # Clear flag so we process this and all subsequent artists
+                    skip_until_album = None  # Also clear album flag since we're starting fresh from this artist
             elif skip_until_artist and found_resume_point and library_name != skip_until_library:
                 # Different library, clear resume flags
                 skip_until_artist = None
