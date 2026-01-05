@@ -6,7 +6,7 @@ Automatically marks explicit music in media servers based on folder and filename
 
 ### Docker (Recommended)
 
-The default setup runs with cron scheduling enabled, processing new albums daily at 2 AM.
+The default setup runs with the built-in Python scheduler enabled, processing new albums daily at 2 AM.
 
 #### From GitHub
 
@@ -49,7 +49,7 @@ tail -f logs/explicit-labeler.log
 ## Documentation
 
 - **[Readme](docs/readme.md)** - Complete documentation and usage guide
-- **[Cron Setup](docs/cron-setup.md)** - Scheduling configuration and setup
+- **[App Scheduling](docs/app-scheduling.md)** - Scheduling configuration and setup
 
 ## Supported Media Servers
 
@@ -64,22 +64,24 @@ tail -f logs/explicit-labeler.log
 - ✅ Resume capability on errors
 - ✅ New album detection (skip processed albums)
 - ✅ Multi-library support
-- ✅ Docker with cron scheduling (configurable via env vars, default: daily at 2 AM)
+- ✅ Docker with built-in Python scheduler (configurable via env vars, default: daily at 2 AM)
 
 ## Default Schedule
 
 The default docker-compose setup runs **daily at 2 AM**, processing only new albums that haven't been processed before.
 
-To customize the schedule, set the `CRON_SCHEDULE` environment variable in your `.env` file:
+To customize the schedule, set the `APP_TIMES` environment variable in your `.env` file. You can specify a single schedule or multiple schedules separated by commas. The scheduler uses **military time format** (HH:MM):
+
 ```bash
 # Edit .env file
 nano .env
 
-# Set CRON_SCHEDULE (examples):
-# CRON_SCHEDULE=0 2 * * *        # Daily at 2 AM (default)
-# CRON_SCHEDULE=0 */6 * * *      # Every 6 hours
-# CRON_SCHEDULE=0 3 * * 1        # Every Monday at 3 AM
-# CRON_SCHEDULE=0 2,14 * * *     # Twice daily (2 AM and 2 PM)
+# Set APP_TIMES (examples):
+APP_TIMES=02:00                        # Daily at 2 AM (default)
+APP_TIMES=14:00                        # Daily at 2 PM
+APP_TIMES=00:30                        # Daily at 12:30 AM
+APP_TIMES=02:00,14:00                 # Twice daily (2 AM and 2 PM)
+APP_TIMES=06:00,12:00,18:00           # Three times daily (6 AM, 12 PM, 6 PM)
 
 # Restart container to apply changes
 docker-compose restart

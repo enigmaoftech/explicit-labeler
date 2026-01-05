@@ -4,13 +4,8 @@ FROM python:3.11-slim
 ARG PUID=1000
 ARG PGID=1000
 
-# Install cron and sudo
-# Note: logrotate removed - log rotation now happens per-run in cron-wrapper.sh
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    cron \
-    sudo \
-    gzip \
-    && rm -rf /var/lib/apt/lists/*
+# No need for cron, sudo, or gzip (Python has gzip module built-in)
+# We run as non-root user for security
 
 WORKDIR /app
 
@@ -18,12 +13,10 @@ WORKDIR /app
 COPY app/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy script and cron files
+# Copy scripts
 COPY app/mark_explicit_music.py .
-COPY app/cron-wrapper.sh /app/cron-wrapper.sh
-COPY app/crontab /app/crontab
+COPY app/scheduler.py .
 COPY docker/entrypoint.sh /app/entrypoint.sh
-# Note: logrotate.conf is now generated dynamically in entrypoint.sh
 
 # Create group and user with specified UID/GID
 RUN groupadd -g ${PGID} appuser || true && \
@@ -38,22 +31,20 @@ ENV PLEX_BASEURL=""
 ENV PLEX_TOKEN=""
 ENV PLEX_LIBRARY="Music"
 ENV DATA_DIR="/app/data"
+ENV LOG_FILE="/app/logs/explicit-labeler.log"
 ENV PUID=${PUID}
 ENV PGID=${PGID}
 
 # Make scripts executable
-RUN chmod +x mark_explicit_music.py cron-wrapper.sh entrypoint.sh
+RUN chmod +x mark_explicit_music.py scheduler.py entrypoint.sh
 
 # Create log file with proper permissions
 RUN touch /app/logs/explicit-labeler.log && \
     chown ${PUID}:${PGID} /app/logs/explicit-labeler.log && \
     chmod 666 /app/logs/explicit-labeler.log
 
-# Install crontab will be done at runtime by entrypoint
-# Keep as root for cron daemon (cron must run as root)
-USER root
-
+# Entrypoint runs as root to fix permissions, then switches to appuser
 # Make entrypoint executable and use it
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["cron", "-f"]
+CMD ["python3", "/app/scheduler.py"]
 

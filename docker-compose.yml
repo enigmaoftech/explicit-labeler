@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   explicit-labeler:
     image: ghcr.io/enigmaoftech/explicit-labeler:latest
@@ -10,7 +8,7 @@ services:
       - PUID=${PUID}
       - PGID=${PGID}
       - RUN_AT_START=${RUN_AT_START}      
-      - CRON_SCHEDULE=${CRON_SCHEDULE}
+      - APP_TIMES=${APP_TIMES}
       - DELAY_AFTER_ALBUM=${DELAY_AFTER_ALBUM}
       - DELAY_AFTER_TRACK=${DELAY_AFTER_TRACK}
       - DELAY_AFTER_ARTIST=${DELAY_AFTER_ARTIST}
@@ -22,12 +20,24 @@ services:
       - LOG_FILE=${LOG_FILE}
       - LOG_RETENTION_RUNS=${LOG_RETENTION_RUNS}      
     volumes:
-      # Persist progress and processed albums cache
       - ./data:/app/data
-      # Logs directory
       - ./logs:/app/logs
-    # Cron runs automatically on schedule (default: daily at 2 AM)
-    # Configure schedule via CRON_SCHEDULE environment variable in .env
+    
+    # Security hardening
+    tty: false
+    stdin_open: false
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    
+    # Read-only root filesystem; allow only what the app needs writable
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=256m
+    
+    # App process guardrails
+    pids_limit: 128
 
 
 # Use this for manual build

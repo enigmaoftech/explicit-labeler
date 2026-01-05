@@ -15,8 +15,8 @@ Automatically marks explicit music in media servers based on folder and filename
 - **Resume Capability**: Automatically saves progress and can resume from where it left off on errors
 - **New Album Detection**: Only processes albums that haven't been processed before (unless `--force` is used)
 - **Multi-Library Support**: Process multiple music libraries in a single run
-- **Docker Support**: Ready to run in a container with cron scheduling
-- **Cron Scheduling**: Automated scheduling (default: daily at 2 AM)
+- **Docker Support**: Ready to run in a container with built-in Python scheduler
+- **Automated Scheduling**: Built-in Python scheduler (default: daily at 2 AM)
 
 ## Quick Start
 
@@ -46,9 +46,8 @@ tail -f logs/explicit-labeler.log
 ```
 
 4. Customize schedule (optional):
-   - Edit `app/crontab` file
-   - Rebuild: `docker-compose build`
-   - Restart: `docker-compose up -d`
+   - Edit `.env` file and set `APP_TIMES` (e.g., `APP_TIMES=02:00,14:00` for twice daily)
+   - Restart: `docker-compose restart`
 
 ### Local Python
 
@@ -62,7 +61,7 @@ python3 mark_explicit_music.py --artist "Taylor Swift"
 
 ### Manual Docker Run (One-time)
 
-For one-time runs without cron:
+For one-time runs without scheduling:
 
 ```bash
 # Dry run
@@ -138,13 +137,13 @@ id -g  # GID
 
 ## Run at Start
 
-By default, the container will run the script immediately when it starts, then continue with the cron schedule. To disable this behavior, set in your `.env` file:
+By default, the container will run the script immediately when it starts, then continue with the scheduled runs. To disable this behavior, set in your `.env` file:
 
 ```bash
 RUN_AT_START=false
 ```
 
-This is useful if you only want the script to run on the cron schedule and not immediately on container start.
+This is useful if you only want the script to run on the scheduled times and not immediately on container start.
 
 ## Throttling
 
@@ -199,17 +198,17 @@ The oldest log is automatically deleted when the retention limit is reached.
 
 ## Scheduling
 
-The default docker-compose setup runs with cron scheduling enabled. The default schedule is **daily at 2 AM**, processing only new albums.
+The default docker-compose setup runs with the built-in Python scheduler enabled. The default schedule is **daily at 2 AM**, processing only new albums.
 
-For detailed scheduling information, see [cron-setup.md](cron-setup.md).
+For detailed scheduling information, see [app-scheduling.md](app-scheduling.md).
 
 ### Quick Schedule Examples
 
 - **Default**: Daily at 2 AM (new albums only)
-- **All libraries**: Edit `crontab` and add `--all-libraries` flag
-- **Full reprocess**: Edit `crontab` and add `--force` flag (use weekly/monthly)
+- **All libraries**: Set `APP_TIMES` in `.env` and add `--all-libraries` flag to the script
+- **Full reprocess**: Set `APP_TIMES` in `.env` and add `--force` flag (use weekly/monthly)
 
 ## Documentation
 
-- [Cron Setup Guide](cron-setup.md) - Detailed scheduling setup and configuration
+- [App Scheduling Guide](app-scheduling.md) - Detailed scheduling setup and configuration
 
