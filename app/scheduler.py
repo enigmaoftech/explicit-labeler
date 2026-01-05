@@ -169,18 +169,15 @@ def parse_schedule(time_str):
         "day_of_week": None,  # "*" -> None for any weekday
     }
 
+def format_time_display(time_str):
+    """
+    Convert military time (HH:MM) to readable format.
+    Examples: "02:00" -> "Daily at 02:00", "14:30" -> "Daily at 14:30"
+    """
+    return f"Daily at {time_str}"
+
 def main():
     """Main scheduler entry point."""
-    print("=" * 60)
-    print("Explicit Labeler - Python Scheduler")
-    print("=" * 60)
-    print(f"Schedule(s): {APP_TIMES}")
-    print(f"Log file: {LOG_FILE}")
-    print(f"Log retention: {LOG_RETENTION_RUNS} runs")
-    print(f"Run at start: {RUN_AT_START}")
-    print("=" * 60)
-    print()
-    
     # Parse APP_TIMES - support comma-separated multiple schedules
     # Split by comma and strip whitespace
     schedule_strings = [s.strip() for s in APP_TIMES.split(",") if s.strip()]
@@ -208,18 +205,53 @@ def main():
             print(f"ERROR: Failed to parse schedule '{schedule_str}' in APP_TIMES: {e}", file=sys.stderr)
             sys.exit(1)
     
+    # Display formatted startup banner (ImageMaid style)
+    banner_width = 100
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+    content_width = banner_width - len(timestamp) - 1  # -1 for the pipe at the end
+    
+    # First border line (no timestamp)
+    print("|" + "=" * (banner_width - 2) + "|")
+    
+    # Title line (with timestamp)
+    title = "Explicit Labeler Continuous Scheduled"
+    title_padding = (content_width - len(title)) // 2
+    print(f"{timestamp}|{' ' * title_padding}{title}{' ' * (content_width - len(title) - title_padding)}|")
+    
+    # Second border line (with timestamp)
+    print(f"{timestamp}|{'=' * (banner_width - len(timestamp) - 2)}|")
+    
+    # Empty line
+    print(f"{timestamp}|{' ' * content_width}|")
+    
+    # Scheduled Runs header
+    print(f"{timestamp}|{'Scheduled Runs:':<{content_width}}|")
+    
+    # Display each scheduled run
+    for trigger, schedule_str in triggers:
+        display_text = format_time_display(schedule_str)
+        print(f"{timestamp}| * {display_text:<{content_width - 3}}|")
+    
+    # Empty line
+    print(f"{timestamp}|{' ' * content_width}|")
+    
+    # Final border line (with timestamp)
+    print(f"{timestamp}|{'=' * (banner_width - len(timestamp) - 2)}|")
+    
+    # Final empty line
+    print(f"{timestamp}|{' ' * content_width}|")
+    
     # Run at start if configured
     if RUN_AT_START:
-        print("Running initial scan at startup...")
+        print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}| Running initial scan at startup...", flush=True)
         run_labeler()
-        print("Initial run complete. Scheduler will continue on schedule.")
+        print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}| Initial run complete. Scheduler will continue on schedule.", flush=True)
         print()
     
     # Create scheduler
     scheduler = BlockingScheduler()
     
-    # Add scheduled jobs for each trigger and display next run times
-    print(f"Scheduler configured with {len(triggers)} schedule(s).")
+    # Add scheduled jobs for each trigger
     for idx, (trigger, schedule_str) in enumerate(triggers):
         job_id = f"explicit-labeler-{idx}"
         scheduler.add_job(
@@ -229,14 +261,6 @@ def main():
             name=f"Run explicit labeler ({schedule_str})",
             replace_existing=True
         )
-        # Calculate next run time from trigger (before scheduler starts)
-        next_run = trigger.get_next_fire_time(None, datetime.now())
-        if next_run:
-            print(f"  Next run: {next_run} ({schedule_str})")
-        else:
-            print(f"  Scheduled: {schedule_str} (next run time will be calculated when scheduler starts)")
-    print("Press Ctrl+C to stop.")
-    print()
     
     try:
         # Run scheduler (blocks until stopped)
