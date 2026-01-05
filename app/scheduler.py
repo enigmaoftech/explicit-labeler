@@ -218,7 +218,8 @@ def main():
     # Create scheduler
     scheduler = BlockingScheduler()
     
-    # Add scheduled jobs for each trigger
+    # Add scheduled jobs for each trigger and display next run times
+    print(f"Scheduler configured with {len(triggers)} schedule(s).")
     for idx, (trigger, schedule_str) in enumerate(triggers):
         job_id = f"explicit-labeler-{idx}"
         scheduler.add_job(
@@ -228,13 +229,12 @@ def main():
             name=f"Run explicit labeler ({schedule_str})",
             replace_existing=True
         )
-    
-    # Display next run times
-    jobs = scheduler.get_jobs()
-    if jobs:
-        print(f"Scheduler started with {len(jobs)} schedule(s).")
-        for job in jobs:
-            print(f"  Next run: {job.next_run_time} ({job.name})")
+        # Calculate next run time from trigger (before scheduler starts)
+        next_run = trigger.get_next_fire_time(None, datetime.now())
+        if next_run:
+            print(f"  Next run: {next_run} ({schedule_str})")
+        else:
+            print(f"  Scheduled: {schedule_str} (next run time will be calculated when scheduler starts)")
     print("Press Ctrl+C to stop.")
     print()
     
