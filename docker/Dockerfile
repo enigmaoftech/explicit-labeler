@@ -9,6 +9,11 @@ ARG PGID=1000
 
 WORKDIR /app
 
+# Install gosu for secure user switching (works without capabilities)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gosu && \
+    rm -rf /var/lib/apt/lists/*
+
 # Install dependencies
 COPY app/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

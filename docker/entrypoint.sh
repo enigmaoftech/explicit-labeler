@@ -37,6 +37,6 @@ chmod 666 /app/logs/explicit-labeler.log 2>/dev/null || true
 mkdir -p /app/data /app/logs 2>/dev/null || true
 
 # Switch to appuser and execute the command (scheduler.py)
-# Use su without - to keep current directory (WORKDIR is /app)
+# Use gosu instead of su - it works without special capabilities
 # $* joins all arguments with spaces, which works for our use case
-exec su appuser -s /bin/bash -c "cd /app && exec $*"
+exec gosu appuser bash -c "cd /app && exec $*"
