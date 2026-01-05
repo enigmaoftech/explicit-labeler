@@ -9,11 +9,6 @@ ARG PGID=1000
 
 WORKDIR /app
 
-# Install gosu for secure user switching (works without capabilities)
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends gosu && \
-    rm -rf /var/lib/apt/lists/*
-
 # Install dependencies
 COPY app/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -27,7 +22,7 @@ COPY docker/entrypoint.sh /app/entrypoint.sh
 RUN groupadd -g ${PGID} appuser || true && \
     useradd -u ${PUID} -g ${PGID} -m -s /bin/bash appuser || true
 
-# Create directory for progress files and logs
+# Create directories (will be overridden by volume mounts, but good for non-volume usage)
 RUN mkdir -p /app/data /app/logs && \
     chown -R ${PUID}:${PGID} /app
 
@@ -43,13 +38,11 @@ ENV PGID=${PGID}
 # Make scripts executable
 RUN chmod +x mark_explicit_music.py scheduler.py entrypoint.sh
 
-# Create log file with proper permissions
-RUN touch /app/logs/explicit-labeler.log && \
-    chown ${PUID}:${PGID} /app/logs/explicit-labeler.log && \
-    chmod 666 /app/logs/explicit-labeler.log
+# Note: Log file will be created by the application at runtime in the mounted volume
+# With read_only: true and volume mounts, the app will create files in mounted volumes
 
-# Entrypoint runs as root to fix permissions, then switches to appuser
-# Make entrypoint executable and use it
+# Entrypoint runs as the user specified in docker-compose (non-root)
+# Container runs with security hardening: cap_drop: ALL, read_only: true
 ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["python3", "/app/scheduler.py"]
 

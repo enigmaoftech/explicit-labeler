@@ -3,6 +3,7 @@ services:
     image: ghcr.io/enigmaoftech/explicit-labeler:latest
     container_name: explicit-labeler
     restart: unless-stopped
+    user: "${PUID}:${PGID}"
     environment:
       - TZ=${TZ}
       - PUID=${PUID}
@@ -21,7 +22,7 @@ services:
       - LOG_RETENTION_RUNS=${LOG_RETENTION_RUNS}      
     volumes:
       - ./data:/app/data
-      - ./logs:/app/logs
+      - ./logs:/app/logs    
     
     # Security hardening
     tty: false
