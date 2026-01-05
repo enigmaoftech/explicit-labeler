@@ -18,6 +18,15 @@ from datetime import datetime
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+# Ensure unbuffered output for real-time logging in Docker
+# This is also handled by the -u flag, but we set it here as well for safety
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(line_buffering=True)
+    sys.stderr.reconfigure(line_buffering=True)
+else:
+    # Python < 3.7 fallback
+    os.environ['PYTHONUNBUFFERED'] = '1'
+
 # Environment variables
 LOG_FILE = os.getenv("LOG_FILE", "/app/logs/explicit-labeler.log")
 LOG_RETENTION_RUNS = int(os.getenv("LOG_RETENTION_RUNS", "7"))
@@ -102,6 +111,10 @@ def run_labeler():
     log_message(f"Started scheduled run at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     log_message("=" * 60)
     
+    # Print to stdout for Docker logs visibility
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+    print(f"{timestamp}| Starting explicit labeler run...", flush=True)
+    
     # Change to app directory
     os.chdir("/app")
     
@@ -110,15 +123,23 @@ def run_labeler():
     
     # Run the script and capture output
     try:
-        # Run with unbuffered output and redirect to log file
+        # Run with unbuffered output - write to both log file and stdout for visibility
         with open(LOG_FILE, 'a') as log_f:
             process = subprocess.Popen(
                 cmd,
-                stdout=log_f,
+                stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 env=os.environ.copy(),
-                text=True
+                text=True,
+                bufsize=1  # Line buffered
             )
+            
+            # Stream output to both log file and stdout
+            for line in process.stdout:
+                log_f.write(line)
+                log_f.flush()
+                print(line.rstrip(), flush=True)
+            
             exit_code = process.wait()
         
         # Log completion
@@ -126,10 +147,20 @@ def run_labeler():
         log_message(f"Exit code: {exit_code}")
         log_message("")
         
+        # Print completion to stdout
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        print(f"{timestamp}| Run completed with exit code: {exit_code}", flush=True)
+        
         return exit_code
     except Exception as e:
-        log_message(f"ERROR running script: {e}")
+        error_msg = f"ERROR running script: {e}"
+        log_message(error_msg)
         log_message("")
+        
+        # Print error to stdout
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        print(f"{timestamp}| {error_msg}", flush=True)
+        
         return 1
 
 def parse_schedule(time_str):
@@ -211,42 +242,44 @@ def main():
     content_width = banner_width - len(timestamp) - 1  # -1 for the pipe at the end
     
     # First border line (no timestamp)
-    print("|" + "=" * (banner_width - 2) + "|")
+    print("|" + "=" * (banner_width - 2) + "|", flush=True)
     
     # Title line (with timestamp)
     title = "Explicit Labeler Continuous Scheduled"
     title_padding = (content_width - len(title)) // 2
-    print(f"{timestamp}|{' ' * title_padding}{title}{' ' * (content_width - len(title) - title_padding)}|")
+    print(f"{timestamp}|{' ' * title_padding}{title}{' ' * (content_width - len(title) - title_padding)}|", flush=True)
     
     # Second border line (with timestamp)
-    print(f"{timestamp}|{'=' * (banner_width - len(timestamp) - 2)}|")
+    print(f"{timestamp}|{'=' * (banner_width - len(timestamp) - 2)}|", flush=True)
     
     # Empty line
-    print(f"{timestamp}|{' ' * content_width}|")
+    print(f"{timestamp}|{' ' * content_width}|", flush=True)
     
     # Scheduled Runs header
-    print(f"{timestamp}|{'Scheduled Runs:':<{content_width}}|")
+    print(f"{timestamp}|{'Scheduled Runs:':<{content_width}}|", flush=True)
     
     # Display each scheduled run
     for trigger, schedule_str in triggers:
         display_text = format_time_display(schedule_str)
-        print(f"{timestamp}| * {display_text:<{content_width - 3}}|")
+        print(f"{timestamp}| * {display_text:<{content_width - 3}}|", flush=True)
     
     # Empty line
-    print(f"{timestamp}|{' ' * content_width}|")
+    print(f"{timestamp}|{' ' * content_width}|", flush=True)
     
     # Final border line (with timestamp)
-    print(f"{timestamp}|{'=' * (banner_width - len(timestamp) - 2)}|")
+    print(f"{timestamp}|{'=' * (banner_width - len(timestamp) - 2)}|", flush=True)
     
     # Final empty line
-    print(f"{timestamp}|{' ' * content_width}|")
+    print(f"{timestamp}|{' ' * content_width}|", flush=True)
     
     # Run at start if configured
     if RUN_AT_START:
-        print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}| Running initial scan at startup...", flush=True)
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        print(f"{timestamp}| Running initial scan at startup...", flush=True)
         run_labeler()
-        print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}| Initial run complete. Scheduler will continue on schedule.", flush=True)
-        print()
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        print(f"{timestamp}| Initial run complete. Scheduler will continue on schedule.", flush=True)
+        print(flush=True)
     
     # Create scheduler
     scheduler = BlockingScheduler()
@@ -262,12 +295,21 @@ def main():
             replace_existing=True
         )
     
+    # Flush all output before starting the blocking scheduler
+    sys.stdout.flush()
+    sys.stderr.flush()
+    
     try:
         # Run scheduler (blocks until stopped)
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):
-        print("\nScheduler stopped.")
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        print(f"\n{timestamp}| Scheduler stopped.", flush=True)
         scheduler.shutdown()
+    except Exception as e:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        print(f"{timestamp}| ERROR: Scheduler failed: {e}", flush=True, file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

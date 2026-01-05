@@ -1,6 +1,12 @@
 services:
   explicit-labeler:
-    image: ghcr.io/enigmaoftech/explicit-labeler:latest
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        - PUID=${PUID:-1000}
+        - PGID=${PGID:-1000}
+    # image: ghcr.io/enigmaoftech/explicit-labeler:latest
     container_name: explicit-labeler
     restart: unless-stopped
     user: "${PUID}:${PGID}"

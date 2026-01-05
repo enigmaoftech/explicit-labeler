@@ -44,5 +44,5 @@ RUN chmod +x mark_explicit_music.py scheduler.py entrypoint.sh
 # Entrypoint runs as the user specified in docker-compose (non-root)
 # Container runs with security hardening: cap_drop: ALL, read_only: true
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["python3", "/app/scheduler.py"]
+CMD ["python3", "-u", "/app/scheduler.py"]
 

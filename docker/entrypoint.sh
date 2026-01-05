@@ -9,5 +9,6 @@
 mkdir -p /app/data /app/logs 2>/dev/null || true
 
 # Execute the command (scheduler.py)
-# $* joins all arguments with spaces
+# Use exec to replace the shell process and ensure output is not buffered
+# $@ preserves quoted arguments
 cd /app && exec "$@"
