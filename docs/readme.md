@@ -189,9 +189,9 @@ LOG_RETENTION_RUNS=3
 
 **How it works**: Each time the script runs, the current log file is rotated:
 - `explicit-labeler.log` - Current active log (new run starts here)
-- `explicit-labeler-1.log.gz` - Previous run (compressed)
-- `explicit-labeler-2.log.gz` - 2 runs ago (compressed)
-- `explicit-labeler-3.log.gz` - 3 runs ago (compressed)
+- `explicit-labeler-1.log` - Previous run
+- `explicit-labeler-2.log` - 2 runs ago
+- `explicit-labeler-3.log` - 3 runs ago
 - ... and so on up to the retention limit
 
 The oldest log is automatically deleted when the retention limit is reached.

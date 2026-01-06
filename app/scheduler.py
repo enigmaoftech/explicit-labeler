@@ -10,7 +10,6 @@ and handles log rotation before each run.
 import os
 import sys
 import subprocess
-import gzip
 import shutil
 import re
 from pathlib import Path
@@ -52,45 +51,23 @@ def rotate_logs():
     
     # Remove oldest log if we're at the retention limit
     oldest_log = log_dir / f"{log_base}-{LOG_RETENTION_RUNS}{log_ext}"
-    oldest_log_gz = log_dir / f"{log_base}-{LOG_RETENTION_RUNS}{log_ext}.gz"
-    
     if oldest_log.exists():
         oldest_log.unlink()
-    if oldest_log_gz.exists():
-        oldest_log_gz.unlink()
     
     # Shift existing rotated logs backwards (move .2 to .3, .1 to .2, etc.)
     for i in range(LOG_RETENTION_RUNS, 1, -1):
         prev = i - 1
         prev_log = log_dir / f"{log_base}-{prev}{log_ext}"
-        prev_log_gz = log_dir / f"{log_base}-{prev}{log_ext}.gz"
         curr_log = log_dir / f"{log_base}-{i}{log_ext}"
-        curr_log_gz = log_dir / f"{log_base}-{i}{log_ext}.gz"
         
         # Move previous to current position
         if prev_log.exists():
             shutil.move(str(prev_log), str(curr_log))
-        elif prev_log_gz.exists():
-            shutil.move(str(prev_log_gz), str(curr_log_gz))
     
-    # Compress the current log before moving it
+    # Move the current log to -1.log
     if log_path.exists():
         rotated_log = log_dir / f"{log_base}-1{log_ext}"
-        rotated_log_gz = log_dir / f"{log_base}-1{log_ext}.gz"
-        
-        # Only compress if -1.log.gz doesn't already exist
-        if not rotated_log_gz.exists():
-            try:
-                with open(log_path, 'rb') as f_in:
-                    with gzip.open(rotated_log_gz, 'wb') as f_out:
-                        shutil.copyfileobj(f_in, f_out)
-                log_path.unlink()
-            except Exception:
-                # If compression fails, just move the file
-                shutil.move(str(log_path), str(rotated_log))
-        else:
-            # If -1.log.gz exists, just move current log to -1.log
-            shutil.move(str(log_path), str(rotated_log))
+        shutil.move(str(log_path), str(rotated_log))
 
 def log_message(message):
     """Append a message to the log file with timestamp."""
