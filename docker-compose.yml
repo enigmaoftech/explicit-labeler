@@ -45,16 +45,3 @@ services:
     
     # App process guardrails
     pids_limit: 128
-
-
-# Use this for manual build
-#services:
-#  explicit-labeler:
-#    build:
-#      context: .
-#      dockerfile: docker/Dockerfile
-#      args:
-#        - PUID=${PUID:-1000}
-#        - PGID=${PGID:-1000}
-#    image: explicit-labeler:latest
-#    container_name: explicit-labeler
